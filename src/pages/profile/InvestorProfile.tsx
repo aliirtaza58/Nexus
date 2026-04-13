@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { MessageCircle, Building2, MapPin, UserCircle, BarChart3, Briefcase } from 'lucide-react';
 import { Avatar } from '../../components/ui/Avatar';
@@ -11,7 +11,10 @@ import { Investor } from '../../types';
 
 export const InvestorProfile: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, updateProfile } = useAuth();
+  
+  const [isEditing, setIsEditing] = useState(false);
+  const [editForm, setEditForm] = useState({ name: currentUser?.name || '', bio: currentUser?.bio || '' });
   
   // Fetch investor data
   const investor = findUserById(id || '') as Investor | null;
@@ -30,6 +33,13 @@ export const InvestorProfile: React.FC = () => {
   
   const isCurrentUser = currentUser?.id === investor.id;
   
+  const handleSaveProfile = async () => {
+    if (currentUser?.id) {
+      await updateProfile(currentUser.id, { name: editForm.name, bio: editForm.bio });
+      setIsEditing(false);
+    }
+  };
+  
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Profile header */}
@@ -44,8 +54,17 @@ export const InvestorProfile: React.FC = () => {
               className="mx-auto sm:mx-0"
             />
             
-            <div className="mt-4 sm:mt-0 text-center sm:text-left">
-              <h1 className="text-2xl font-bold text-gray-900">{investor.name}</h1>
+            <div className="mt-4 sm:mt-0 text-center sm:text-left w-full">
+              {isEditing ? (
+                <input 
+                  type="text" 
+                  className="text-2xl font-bold text-gray-900 border rounded px-2 py-1 mb-2 w-full max-w-sm"
+                  value={editForm.name}
+                  onChange={(e) => setEditForm({...editForm, name: e.target.value})}
+                />
+              ) : (
+                <h1 className="text-2xl font-bold text-gray-900">{isCurrentUser ? currentUser?.name || investor.name : investor.name}</h1>
+              )}
               <p className="text-gray-600 flex items-center justify-center sm:justify-start mt-1">
                 <Building2 size={16} className="mr-1" />
                 Investor • {investor.totalInvestments} investments
@@ -74,13 +93,20 @@ export const InvestorProfile: React.FC = () => {
               </Link>
             )}
             
-            {isCurrentUser && (
+            {isCurrentUser && !isEditing && (
               <Button
                 variant="outline"
                 leftIcon={<UserCircle size={18} />}
+                onClick={() => setIsEditing(true)}
               >
                 Edit Profile
               </Button>
+            )}
+            {isCurrentUser && isEditing && (
+              <div className="flex space-x-2">
+                <Button variant="outline" onClick={() => setIsEditing(false)}>Cancel</Button>
+                <Button onClick={handleSaveProfile}>Save</Button>
+              </div>
             )}
           </div>
         </CardBody>
@@ -95,7 +121,15 @@ export const InvestorProfile: React.FC = () => {
               <h2 className="text-lg font-medium text-gray-900">About</h2>
             </CardHeader>
             <CardBody>
-              <p className="text-gray-700">{investor.bio}</p>
+              {isEditing ? (
+                <textarea 
+                  className="w-full border rounded p-2 text-gray-700 min-h-[100px]"
+                  value={editForm.bio}
+                  onChange={(e) => setEditForm({...editForm, bio: e.target.value})}
+                />
+              ) : (
+                <p className="text-gray-700">{isCurrentUser ? currentUser?.bio || investor.bio : investor.bio}</p>
+              )}
             </CardBody>
           </Card>
           
